@@ -1,35 +1,84 @@
 #LookAt 0 120 40  0 0 40  0 0 1
 #LookAt 0 0 120 0 0 0 0 0 1 # Good for simple 2D systems
-LookAt -70 70 0 0 0 0 0 0 1 # Good for 3D models - manipulating the first coordinates zooms the camera
-#LookAt 3 4 1.5  # eye
-#       .5 .5 0  # look at point
-#       0 0 1    # up vector
+# LookAt -30 30 0 0 0 0 0 0 1 # Good for 3D models - manipulating the first coordinates zooms the camera
+LookAt -20 20 5   # eye
+        0 0 10    # look at point
+        0 0 1     # up vector
 
-Camera "perspective" "float fov" [40]
+Camera "perspective" "float fov" 60
 
-Film "image" "integer xresolution" [1500] "integer yresolution" [1500]
-	"string filename" ["lsystem.exr"]
+Film "image" "integer xresolution" 1500 "integer yresolution" 1500
+	"string filename" "lsystem.exr"
 
-Sampler "lowdiscrepancy" "integer pixelsamples" [32]
+Sampler "halton" "integer pixelsamples" 64
+
+Integrator "path"
 
 WorldBegin
 
-	LightSource "distant" "point from" [0.3 1 0.3] "point to" [0 0 0]
-AttributeBegin
+  # uniform blue-ish illumination from all directions
+  LightSource "infinite" "rgb L" [.4 .45 .5]
 
-  Material "matte" "color Kd" [.5 .5 .8]
-  # Gosper Curve
-  # Shape "lsystem" "integer iterations" [4] "float delta" [60.0] "string axiom" ["F"] "productions prod" ["{'F': ['F+F++F-F--FF-F+', '-F+FF++F+F--F-F']}"]
+  # approximate the sun
+	LightSource "distant" "point from" [30 40 100] "blackbody L" [6000 1.5]
 
-  # Koch curve
-  # Shape "lsystem" "integer iterations" [6] "float delta" [90.0] "string axiom" ["F-F-F-F"] "productions prod" ["{'F': ['FF-F-F-F-F-F+F']}"]
+  # Checkerboard tile floor
+  AttributeBegin
+    Texture "checks" "spectrum" "checkerboard"
+            "float uscale" [8] "float vscale" [8]
+            "rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
+    Material "matte" "texture Kd" "checks"
+    Shape "trianglemesh"
+        "integer indices" [0 1 2 0 2 3]
+        "point P" [ -20 -20 0   20 -20 0   20 20 0   -20 20 0 ]
+        "float st" [ 0 0   1 0    1 1   0 1 ]
+  AttributeEnd
 
-  #3d Hilbert curve
-  # Shape "lsystem" "integer iterations" [3] "float delta" [90.0] "string axiom" ["A"] "productions prod" ["{'A': ['B-F+CFC+F-D&F^D-F+&&CFC+F+B//'], 'B': ['A&F^CFB^F^D^^-F-D^|F^B|FC^F^A//'], 'D': ['|CFB-F+B|FA&F^A&&FB-F+B|FC//'], 'C': ['|D^|F^B-F+C^F^A&&FA&F^C+F+B^F^D//']}"]
+  AttributeBegin
+    # Gosper Curve
+    # Shape "lsystem" 
+    #  "integer iterations" 4
+    #  "float delta" 60.0 
+    #  "string axiom" "F" 
+    #  "productions prod" "{'F': ['F+F++F-F--FF-F+', '-F+FF++F+F--F-F']}"
 
-  # Tree
-  Shape "lsystem" "integer iterations" [6] "float delta" [22.5] "string axiom" ["A"] "productions prod" ["{'A': ['{&FLA}/////{&FLA}///////{&FLA}'], 'F': ['S/////F'], 'S': ['F'], 'L': ['{Q^^Q}{Q\\\\Q}']}"]
+    # Koch curve
+    # Shape "lsystem" 
+    #  "integer iterations" 6
+    #  "float delta" 90.0 
+    #  "string axiom" "F-F-F-F" 
+    #  "productions prod" "{'F': ['FF-F-F-F-F-F+F']}"
 
-AttributeEnd
+    #3d Hilbert curve
+    # Shape "lsystem" 
+    #  "integer iterations" 3
+    #  "float delta" 90.0 
+    #  "string axiom" "A" 
+    #  "productions prod" "{'A': ['B-F+CFC+F-D&F^D-F+&&CFC+F+B//'], 'B': ['A&F^CFB^F^D^^-F-D^|F^B|FC^F^A//'], 'D': ['|CFB-F+B|FA&F^A&&FB-F+B|FC//'], 'C': ['|D^|F^B-F+C^F^A&&FA&F^C+F+B^F^D//']}"
+
+    ObjectBegin "bark"
+      # Material "matte" "color Kd" [0.4 0.2 0.15]
+      Texture "b" "color" "imagemap" "string filename" "bark.exr"
+      Material "matte" "texture Kd" "b"
+      Shape "cylinder" "float radius" 0.15 "float zmin" 0.0 "float zmax" 1.0
+    ObjectEnd
+
+    ObjectBegin "leaf"
+      # Material "matte" "color Kd" [0.3 0.7 0.25]
+      Texture "l" "color" "imagemap" "string filename" "leaf.exr"
+      Material "matte" "texture Kd" "l"
+      Shape "disk" "float radius" 0.4
+    ObjectEnd
+
+    # Tree
+    Shape "lsystem" 
+      "integer iterations" 6
+      "float delta" 22.5
+      "string axiom" "A"
+      "string F" "bark"
+      "string Q" "leaf"
+      "productions prod" "{'A': ['{&FLA}/////{&FLA}///////{&FLA}'], 'F': ['S/////F'], 'S': ['F'], 'L': ['{Q^^Q}{Q\\\\Q}']}"
+
+  AttributeEnd
 
 WorldEnd

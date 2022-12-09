@@ -559,59 +559,36 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
         std::stack<Transform> transformStack;
         transformStack.push(t);
 
-
-        ParamSet cylParams;
-        std::unique_ptr<Float[]> radius(new Float[1]);
-        std::unique_ptr<Float[]> zmin(new Float[1]);
-        std::unique_ptr<Float[]> zmax(new Float[1]);
-        radius.get()[0] = 0.1;
-        zmin.get()[0] = 0.0;
-        zmax.get()[0] = 1.0;
-
-        cylParams.AddFloat("radius", std::move(radius));
-        cylParams.AddFloat("zmin", std::move(zmin));
-        cylParams.AddFloat("zmax", std::move(zmax));
-
         for (char ins : current) {
-            if (ins == 'F') {
-                Transform& top = transformStack.top();
-                Transform* localTransform = transformCache.Lookup(top); // o2w
-                Transform* iLocalTransform = transformCache.Lookup(Transform(top.GetInverseMatrix())); //w20
-
-                shapes.push_back(CreateCylinderShape(localTransform, iLocalTransform, reverseOrientation, cylParams));
-
-                top = top * Translate(Vector3f(0.0, 0.0, 1.0));
-            } else if (ins == '+') { //Rotate %s 0.0 1.0 0.0
-                Transform& top = transformStack.top();
+            Transform& top = transformStack.top();
+            if (ins == '+') { //Rotate %s 0.0 1.0 0.0
                 top = top * RotateY(delta);
             } else if (ins == '-') { //Rotate -%s 0.0 1.0 0.0
-                Transform& top = transformStack.top();
                 top = top * RotateY(-delta);
             } else if (ins == '&') { //Rotate %s 1.0 0.0 0.0
-                Transform& top = transformStack.top();
                 top = top * RotateX(delta);
             } else if (ins == '^') { //Rotate -%s 1.0 0.0 0.0
-                Transform& top = transformStack.top();
                 top = top * RotateX(-delta);
             } else if (ins == '\\') { //Rotate %s 0.0 0.0 1.0
-                Transform& top = transformStack.top();
                 top = top * RotateZ(delta);
             } else if (ins == '/') { //Rotate -%s 0.0 0.0 1.0
-                Transform& top = transformStack.top();
                 top = top * RotateZ(-delta);
             } else if (ins == '|') { //Rotate 180 0.0 1.0 0.0
-                Transform& top = transformStack.top();
                 top = top * RotateY(180);
             } else if (ins == '{') { //Branch
-                Transform newTop = transformStack.top();
+                Transform newTop = top;
                 transformStack.push(newTop);
             } else if (ins == '}') { //Branch
                 transformStack.pop();
-            } else if (ins == 'Q') { //leaf
-                // const Vector3f translateVec = 
-                // t = t + Translate(1+radius[0]);   
-                // const int range_from  = 0;
-                // const int range_to = 1000;
+            } else {
+                std::string objectToInstance = paramSet.FindOneString(std::string(1, ins), "");
+                if (objectToInstance == "") continue;
+
+                Transform* localTransform = transformCache.Lookup(top); // o2w
+                FOR_ACTIVE_TRANSFORMS(curTransform[i] = *localTransform;)
+                pbrtObjectInstance(objectToInstance);
+
+                top = top * Translate(Vector3f(0.0, 0.0, 1.0)); // Todo: figure out how to get this 1.0 value from the object
             }
         }
 

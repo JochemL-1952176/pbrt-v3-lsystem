@@ -739,30 +739,7 @@ static void AddParam(ParamSet &ps, const ParamListItem &item,
                 searchStart = rules.suffix().first;
                 productions[0].insert({key, replace_vector});
             }
-
-            // for (int j = 0; j < nItems; j++){
-            //     std::string production = item.stringValues[j];
-            //     std::map<char, std::vector<std::string>> _productions;
-
-            //     std::smatch groups;
-            //     std::regex_match(production, groups, dict);
-            //     for (int i = 1; i < groups.size(); i += 2) {
-            //         std::string lhs = groups[i].str();
-            //         if (lhs == "") break;
-
-            //         std::vector<std::string> rhs_vector;
-            //         std::string rhs = groups[i + 1].str();
-            //         std::smatch replace_groups;
-            //         std::regex_match(rhs, replace_groups, _replace);
-            //         for (int j = 1; j <replace_groups.size(); j++) {
-            //             std::string temp = replace_groups[j];
-            //             if (temp == "") break;
-            //             rhs_vector.push_back(temp);
-            //         }
-
-            //         _productions.insert({lhs[0], rhs_vector});
-            //     }
-
+            
             ps.AddProductions(name, std::move(productions), nItems);
         }
     } else
