@@ -70,14 +70,50 @@ WorldBegin
       Shape "disk" "float radius" 0.4
     ObjectEnd
 
+    ObjectBegin "flower"
+      Material "matte" "color Kd" [0.3 0.7 0.25]
+      Shape "cylinder" "float radius" 0.1 "float zmin" 0.0 "float zmax" 1.0
+    ObjectEnd
+
+    ObjectBegin "petal"
+      Material "matte" "color Kd" [0.8 0.1 0.1]
+      Shape "cylinder" "float radius" 0.1 "float zmin" 0.0 "float zmax" 1.0
+    ObjectEnd
+
     # Tree
-    Shape "lsystem" 
-      "integer iterations" 6
-      "float delta" 22.5
-      "string axiom" "A"
-      "string F" "bark"
-      "string Q" "leaf"
-      "productions prod" "{'A': ['{&FLA}/////{&FLA}///////{&FLA}'], 'F': ['S/////F'], 'S': ['F'], 'L': ['{Q^^Q}{Q\\\\Q}']}"
+    ObjectBegin "tree"
+      Shape "lsystem" 
+        "integer iterations" 6
+        "float delta" 22.5
+        "string F" "bark"
+        "string Q" "leaf"
+        "string axiom" "A"
+        "productions prod" "{'A': ['{&FLA}/////{&FLA}///////{&FLA}'], 'F': ['S/////F'], 'S': ['F'], 'L': ['{Q^^Q}{Q\\\\Q}']}"
+    ObjectEnd
+
+    ObjectInstance "tree"
+    AttributeBegin
+      Translate 6 6 0
+      Rotate 50 0 0 1
+      ObjectInstance "tree"
+    AttributeEnd
+    
+    AttributeBegin
+      Translate -6 -6 0
+      Rotate 120 0 0 1
+      ObjectInstance "tree"  
+    AttributeEnd
+
+    # ObjectBegin "flower"
+      # Shape "lsystem" 
+      #   "integer iterations" 5
+      #   "float delta" 18
+      #   "string F" "flower"
+      #   "string Q" "petal"
+      #   "string axiom" "P"
+      #   "productions prod" "{'P': ['I+{P+O}--//{--L}I{++L}-{PO}++PO'], 'I': ['FS{//&&L}{//^^L}FS'], 'S': ['S{//&&L}{//^^L}FS', 'SFS', 'S'], 'L': ['{+F-FF-F+|+F-FF-F}'], 'O': ['{&&&D/W////W////W////W////W}'], 'D': ['FF'], 'W': ['{^Q}{&&&&-Q+Q|-Q+Q}']}"
+    # ObjectEnd
+    # ObjectInstance "flower"
 
   AttributeEnd
 

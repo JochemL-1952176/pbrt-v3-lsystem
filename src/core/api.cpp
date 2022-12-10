@@ -586,7 +586,12 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
 
                 Transform* localTransform = transformCache.Lookup(top); // o2w
                 FOR_ACTIVE_TRANSFORMS(curTransform[i] = *localTransform;)
-                pbrtObjectInstance(objectToInstance);
+                std::shared_ptr<Primitive> instance = getpbrtObjectInstance(objectToInstance);
+                if (renderOptions->currentInstance) {
+                    renderOptions->currentInstance->push_back(instance);
+                } else {
+                    renderOptions->primitives.push_back(instance);
+                }
 
                 top = top * Translate(Vector3f(0.0, 0.0, 1.0)); // Todo: figure out how to get this 1.0 value from the object
             }
@@ -1613,25 +1618,19 @@ void pbrtObjectEnd() {
 
 STAT_COUNTER("Scene/Object instances used", nObjectInstancesUsed);
 
-void pbrtObjectInstance(const std::string &name) {
-    VERIFY_WORLD("ObjectInstance");
+std::shared_ptr<Primitive> getpbrtObjectInstance(const std::string& name) {
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sObjectInstance \"%s\"\n", catIndentCount, "", name.c_str());
-        return;
+        return nullptr;
     }
 
-    // Perform object instance error checking
-    if (renderOptions->currentInstance) {
-        Error("ObjectInstance can't be called inside instance definition");
-        return;
-    }
     if (renderOptions->instances.find(name) == renderOptions->instances.end()) {
         Error("Unable to find instance named \"%s\"", name.c_str());
-        return;
+        return nullptr;
     }
     std::vector<std::shared_ptr<Primitive>> &in =
         renderOptions->instances[name];
-    if (in.empty()) return;
+    if (in.empty()) return nullptr;
     ++nObjectInstancesUsed;
     if (in.size() > 1) {
         // Create aggregate for instance _Primitive_s
@@ -1654,7 +1653,18 @@ void pbrtObjectInstance(const std::string &name) {
         InstanceToWorld[1], renderOptions->transformEndTime);
     std::shared_ptr<Primitive> prim(
         std::make_shared<TransformedPrimitive>(in[0], animatedInstanceToWorld));
-    renderOptions->primitives.push_back(prim);
+    return prim;
+}
+
+void pbrtObjectInstance(const std::string &name) {
+    VERIFY_WORLD("ObjectInstance");
+    // Perform object instance error checking
+    if (renderOptions->currentInstance) {
+        Error("ObjectInstance can't be called inside instance definition");
+        return;
+    }
+
+    renderOptions->primitives.push_back(getpbrtObjectInstance(name));
 }
 
 void pbrtWorldEnd() {
