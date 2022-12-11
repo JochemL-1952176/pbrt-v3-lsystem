@@ -215,10 +215,10 @@ void ParamSet::AddString(const std::string &name,
 }
 
 //Lsystem extension
-void ParamSet::AddProductions(const std::string &name,
-                              std::unique_ptr<std::map<char, std::vector<std::string>>[]> values, int nValues) {
-    EraseProductions(name);
-    productions.emplace_back(new ParamSetItem<std::map<char, std::vector<std::string>>>(name, std::move(values), nValues));
+void ParamSet::AddProduction(const std::string &name,
+                              std::unique_ptr<std::pair<char, std::vector<std::string>>[]> values, int nValues) {
+    EraseProduction(name);
+    productions.emplace_back(new ParamSetItem<std::pair<char, std::vector<std::string>>>(name, std::move(values), nValues));
 }
 
 void ParamSet::AddTexture(const std::string &name, const std::string &value) {
@@ -329,7 +329,7 @@ bool ParamSet::EraseTexture(const std::string &n) {
     return false;
 }
 
-bool ParamSet::EraseProductions(const std::string &s){
+bool ParamSet::EraseProduction(const std::string &s){
     for (size_t i = 0; i < productions.size(); ++i)
         if (productions[i]->name == s) {
             productions.erase(productions.begin() + i);
@@ -443,8 +443,13 @@ std::string ParamSet::FindOneString(const std::string &name,
     LOOKUP_ONE(strings);
 }
 
-std::map<char, std::vector<std::string>> ParamSet::FindOneProductions(const std::string &name,
-                                                          const std::map<char, std::vector<std::string>> &d) const {
+const std::pair<char, std::vector<std::string>> *ParamSet::FindProduction(const std::string &name,
+                                                                int *nValues) const {
+    LOOKUP_PTR(productions);
+}
+
+std::pair<char, std::vector<std::string>> ParamSet::FindOneProduction(const std::string &name,
+                                                          const std::pair<char, std::vector<std::string>> &d) const {
     LOOKUP_ONE(productions);
 }
 

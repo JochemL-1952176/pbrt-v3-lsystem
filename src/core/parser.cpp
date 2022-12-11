@@ -409,7 +409,7 @@ enum {
     PARAM_TYPE_SPECTRUM,
     PARAM_TYPE_STRING,
     PARAM_TYPE_TEXTURE,
-    PARAM_TYPE_PRODUCTIONS
+    PARAM_TYPE_PRODUCTION
 };
 
 static bool lookupType(const std::string &decl, int *type, std::string &sname) {
@@ -470,8 +470,8 @@ static bool lookupType(const std::string &decl, int *type, std::string &sname) {
         *type = PARAM_TYPE_BLACKBODY;
     else if (typeStr == "spectrum")
         *type = PARAM_TYPE_SPECTRUM;
-    else if (typeStr == "productions")
-        *type = PARAM_TYPE_PRODUCTIONS;
+    else if (typeStr == "production")
+        *type = PARAM_TYPE_PRODUCTION;
     else {
         Error("Unable to decode type from \"%s\"", decl.c_str());
         return false;
@@ -518,8 +518,8 @@ static const char *paramTypeToName(int type) {
         return "string";
     case PARAM_TYPE_TEXTURE:
         return "texture";
-    case PARAM_TYPE_PRODUCTIONS:
-        return "productions";
+    case PARAM_TYPE_PRODUCTION:
+        return "production";
     default:
         LOG(FATAL) << "Error in paramTypeToName";
         return nullptr;
@@ -532,7 +532,7 @@ static void AddParam(ParamSet &ps, const ParamListItem &item,
     std::string name;
     if (lookupType(item.name, &type, name)) {
         if (type == PARAM_TYPE_TEXTURE || type == PARAM_TYPE_STRING ||
-            type == PARAM_TYPE_BOOL || type == PARAM_TYPE_PRODUCTIONS) {
+            type == PARAM_TYPE_BOOL || type == PARAM_TYPE_PRODUCTION) {
             if (!item.stringValues) {
                 Error(
                     "Expected string parameter value for parameter "
@@ -709,38 +709,41 @@ static void AddParam(ParamSet &ps, const ParamListItem &item,
                     "Only one string allowed for \"texture\" parameter "
                     "\"%s\"",
                     name.c_str());
-        } else if (type == PARAM_TYPE_PRODUCTIONS) {
-            std::unique_ptr<std::map<char, std::vector<std::string>>[]> productions(new std::map<char, std::vector<std::string>>[nItems]);
+        } else if (type == PARAM_TYPE_PRODUCTION) {
+            std::unique_ptr<std::pair<char, std::vector<std::string>>[]> productions(new std::pair<char, std::vector<std::string>>[nItems]);
             // TODO: add more transformation symbols
-            std::string pattern = "\\'(\\w)\\'";
-            std::string replaceSingle = "\\'[\\w\\-+&^\\\\|/{}]+\\'";
-            std::string replaceSingleCapture = "\\'([\\w\\-+&^\\\\|/{}]+)\\'";
+            std::string pattern = "(\\w)";
+            std::string replaceSingle = "[\\w-+&^\\\\|/{}]+";
+            std::string replaceSingleCapture = "([\\w\\-+&^\\\\|/{}]+)";
             std::string replace = "(\\[" + replaceSingle + "(?:,\\s*" + replaceSingle + ")*\\])";
-            std::string rule = pattern + ":\\s*" + replace;
+            std::string rule = pattern + "\\s*=>\\s*" + replace;
 
             std::regex ruleRegex(rule);
             std::regex replaceRegex(replaceSingleCapture);
 
-            std::string s = item.stringValues[0];
+            for (int j = 0; j < nItems; ++j) {
+                std::string s = item.stringValues[j];
+                std::smatch rule;
+                std::regex_match(s, rule, ruleRegex);
 
-            std::smatch rules;
-            std::string::const_iterator searchStart(s.cbegin() + 1);
-            while ( std::regex_search(searchStart, s.cend(), rules, ruleRegex)) {
-                char key = rules[1].str()[0];
-                std::string replace = rules[2].str();
-
-                std::smatch replaces;
-                std::string::const_iterator replaceSearchStart(replace.begin() + 1);
-                std::vector<std::string> replace_vector;
-                while (std::regex_search(replaceSearchStart, replace.cend(), replaces, replaceRegex)) {
-                    replace_vector.push_back(replaces[1].str());
-                    replaceSearchStart = replaces.suffix().first;
+                if (rule.size() == 3) {
+                    char key = rule[1].str()[0];
+                    std::string replace = rule[2].str();
+                    
+                    std::smatch replaces;
+                    std::string::const_iterator replaceSearchStart(replace.begin() + 1);
+                    std::vector<std::string> replace_vector;
+                    while (std::regex_search(replaceSearchStart, replace.cend(), replaces, replaceRegex)) {
+                        replace_vector.push_back(replaces[1].str());
+                        replaceSearchStart = replaces.suffix().first;
+                    }
+                    productions[j] = {key, replace_vector};
+                } else {
+                    Error("Incorrect formatting of production rule");
                 }
-                searchStart = rules.suffix().first;
-                productions[0].insert({key, replace_vector});
             }
             
-            ps.AddProductions(name, std::move(productions), nItems);
+            ps.AddProduction(name, std::move(productions), nItems);
         }
     } else
         Warning("Type of parameter \"%s\" is unknown", item.name.c_str());

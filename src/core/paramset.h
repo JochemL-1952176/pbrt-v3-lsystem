@@ -69,7 +69,7 @@ class ParamSet {
     void AddNormal3f(const std::string &, std::unique_ptr<Normal3f[]> v,
                      int nValues);
     void AddString(const std::string &, std::unique_ptr<std::string[]> v, int nValues);
-    void AddProductions(const std::string &, std::unique_ptr<std::map<char, std::vector<std::string>>[]> v, int nValues);                  
+    void AddProduction(const std::string &, std::unique_ptr<std::pair<char, std::vector<std::string>>[]> v, int nValues);                  
     void AddTexture(const std::string &, const std::string &);
     void AddRGBSpectrum(const std::string &, std::unique_ptr<Float[]> v,
                         int nValues);
@@ -92,7 +92,7 @@ class ParamSet {
     bool EraseSpectrum(const std::string &);
     bool EraseString(const std::string &);
     bool EraseTexture(const std::string &);
-    bool EraseProductions(const std::string &);
+    bool EraseProduction(const std::string &);
 
     Float FindOneFloat(const std::string &, Float d) const;
     int FindOneInt(const std::string &, int d) const;
@@ -104,7 +104,7 @@ class ParamSet {
     Normal3f FindOneNormal3f(const std::string &, const Normal3f &d) const;
     Spectrum FindOneSpectrum(const std::string &, const Spectrum &d) const;
     std::string FindOneString(const std::string &, const std::string &d) const;
-    std::map<char, std::vector<std::string>> FindOneProductions(const std::string &, const std::map<char, std::vector<std::string>> &d) const;
+    std::pair<char, std::vector<std::string>> FindOneProduction(const std::string &, const std::pair<char, std::vector<std::string>> &d) const;
     std::string FindOneFilename(const std::string &,
                                 const std::string &d) const;
     std::string FindTexture(const std::string &) const;
@@ -118,6 +118,7 @@ class ParamSet {
     const Normal3f *FindNormal3f(const std::string &, int *nValues) const;
     const Spectrum *FindSpectrum(const std::string &, int *nValues) const;
     const std::string *FindString(const std::string &, int *nValues) const;
+    const std::pair<char, std::vector<std::string>> *FindProduction(const std::string &, int *nValues) const;
     void ReportUnused() const;
     void Clear();
     std::string ToString() const;
@@ -139,7 +140,7 @@ class ParamSet {
     std::vector<std::shared_ptr<ParamSetItem<Spectrum>>> spectra;
     std::vector<std::shared_ptr<ParamSetItem<std::string>>> strings;
     std::vector<std::shared_ptr<ParamSetItem<std::string>>> textures;
-    std::vector<std::shared_ptr<ParamSetItem<std::map<char, std::vector<std::string>>>>> productions;
+    std::vector<std::shared_ptr<ParamSetItem<std::pair<char, std::vector<std::string>>>>> productions;
     static std::map<std::string, Spectrum> cachedSpectra;
 };
 

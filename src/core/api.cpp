@@ -535,15 +535,20 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
         int iterations = paramSet.FindOneInt("iterations", 3);
         float delta = paramSet.FindOneFloat("delta", 90);
         std::string axiom = paramSet.FindOneString("axiom", "");
-        std::map<char, std::vector<std::string>> productions = paramSet.FindOneProductions("prod", std::map<char, std::vector<std::string>>());
+        int nProductions;
+        std::map<char, std::vector<std::string>> productionMap;
+        const std::pair<char, std::vector<std::string>>* productions = paramSet.FindProduction("productions", &nProductions);
+        while (nProductions --> 0) {
+            productionMap.insert(productions[nProductions]);
+        }
 
         std::string current = axiom;
         std::string next;
 
         while (iterations --> 0) {
             for (char sym : current) {
-                auto replace = productions.find(sym);
-                if (replace != productions.end()) {
+                auto replace = productionMap.find(sym);
+                if (replace != productionMap.end()) {
                     std::vector<std::string>& options = replace->second;
                     int choice = rand() % options.size();
                     next += options[choice];
@@ -596,10 +601,6 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
                 top = top * Translate(Vector3f(0.0, 0.0, 1.0)); // Todo: figure out how to get this 1.0 value from the object
             }
         }
-
-        // int size = shapes.size();
-        // shapes.reserve(shapes.size() + lSystemShapes.size());
-        // shapes.insert(shapes.begin() + size + 1, lSystemShapes.begin(), lSystemShapes.end());
     }
     else
         Warning("Shape \"%s\" unknown.", name.c_str());
