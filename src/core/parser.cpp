@@ -713,8 +713,8 @@ static void AddParam(ParamSet &ps, const ParamListItem &item,
             std::unique_ptr<std::pair<char, std::vector<std::string>>[]> productions(new std::pair<char, std::vector<std::string>>[nItems]);
             // TODO: add more transformation symbols
             std::string pattern = "(\\w)";
-            std::string replaceSingle = "[\\w-+&^\\\\|/{}]+";
-            std::string replaceSingleCapture = "([\\w\\-+&^\\\\|/{}]+)";
+            std::string replaceSingle = "[\\w-+&^\\\\|/!?{}]+";
+            std::string replaceSingleCapture = "([\\w\\-+&^\\\\|/!?{}]+)";
             std::string replace = "(\\[" + replaceSingle + "(?:,\\s*" + replaceSingle + ")*\\])";
             std::string rule = pattern + "\\s*=>\\s*" + replace;
 

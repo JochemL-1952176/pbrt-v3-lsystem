@@ -86,6 +86,7 @@ void pbrtReverseOrientation();
 void pbrtObjectBegin(const std::string &name);
 void pbrtObjectEnd();
 std::shared_ptr<Primitive> getpbrtObjectInstance(const std::string& name);
+std::shared_ptr<Primitive> ApplyTransforms(std::shared_ptr<Primitive>& prim);
 void pbrtObjectInstance(const std::string &name);
 void pbrtWorldEnd();
 

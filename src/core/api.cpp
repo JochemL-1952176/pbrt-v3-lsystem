@@ -534,6 +534,7 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
         // TODO: Extract to CreateLSystem function
         int iterations = paramSet.FindOneInt("iterations", 3);
         float delta = paramSet.FindOneFloat("delta", 90);
+        float scaleFactor = paramSet.FindOneFloat("scale_factor", 1);
         std::string axiom = paramSet.FindOneString("axiom", "");
         int nProductions;
         std::map<char, std::vector<std::string>> productionMap;
@@ -561,44 +562,57 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
         }
 
         Transform t = *object2world;
-        std::stack<Transform> transformStack;
-        transformStack.push(t);
+        std::stack<Transform> rotationStack;
+        std::stack<Transform> scaleStack;
+        rotationStack.push(t);
+        scaleStack.push(Transform());
+        float radius = 1;
 
         for (char ins : current) {
-            Transform& top = transformStack.top();
-            if (ins == '+') { //Rotate %s 0.0 1.0 0.0
-                top = top * RotateY(delta);
-            } else if (ins == '-') { //Rotate -%s 0.0 1.0 0.0
-                top = top * RotateY(-delta);
-            } else if (ins == '&') { //Rotate %s 1.0 0.0 0.0
-                top = top * RotateX(delta);
-            } else if (ins == '^') { //Rotate -%s 1.0 0.0 0.0
-                top = top * RotateX(-delta);
-            } else if (ins == '\\') { //Rotate %s 0.0 0.0 1.0
-                top = top * RotateZ(delta);
-            } else if (ins == '/') { //Rotate -%s 0.0 0.0 1.0
-                top = top * RotateZ(-delta);
-            } else if (ins == '|') { //Rotate 180 0.0 1.0 0.0
-                top = top * RotateY(180);
+            Transform& rotTop = rotationStack.top();
+            Transform& scaleTop = scaleStack.top();
+            if (ins == '+') {
+                rotTop = rotTop * RotateY(delta);
+            } else if (ins == '-') {
+                rotTop = rotTop * RotateY(-delta);
+            } else if (ins == '&') {
+                rotTop = rotTop * RotateX(delta);
+            } else if (ins == '^') {
+                rotTop = rotTop * RotateX(-delta);
+            } else if (ins == '\\') {
+                rotTop = rotTop * RotateZ(delta);
+            } else if (ins == '/') {
+                rotTop = rotTop * RotateZ(-delta);
+            } else if (ins == '|') {
+                rotTop = rotTop * RotateY(180);
+            } else if (ins == '!') {
+                scaleTop = scaleTop *  Scale(scaleFactor, scaleFactor, 1);
+            } else if (ins == '?') {
+                scaleTop = Transform(); // Identity
             } else if (ins == '{') { //Branch
-                Transform newTop = top;
-                transformStack.push(newTop);
+                rotationStack.push(rotTop);
+                scaleStack.push(scaleTop);
             } else if (ins == '}') { //Branch
-                transformStack.pop();
+                rotationStack.pop();
+                scaleStack.pop();
             } else {
                 std::string objectToInstance = paramSet.FindOneString(std::string(1, ins), "");
                 if (objectToInstance == "") continue;
 
-                Transform* localTransform = transformCache.Lookup(top); // o2w
-                FOR_ACTIVE_TRANSFORMS(curTransform[i] = *localTransform;)
                 std::shared_ptr<Primitive> instance = getpbrtObjectInstance(objectToInstance);
+                Bounds3f bounds = instance->WorldBound();
+                float zHeight = std::abs(bounds.pMin.z - bounds.pMax.z);
+
+                FOR_ACTIVE_TRANSFORMS(curTransform[i] = rotTop * scaleTop;);
+
+                std::shared_ptr<Primitive> transformedInstance = ApplyTransforms(instance);
                 if (renderOptions->currentInstance) {
-                    renderOptions->currentInstance->push_back(instance);
+                    renderOptions->currentInstance->push_back(transformedInstance);
                 } else {
-                    renderOptions->primitives.push_back(instance);
+                    renderOptions->primitives.push_back(transformedInstance);
                 }
 
-                top = top * Translate(Vector3f(0.0, 0.0, 1.0)); // Todo: figure out how to get this 1.0 value from the object
+                rotTop = rotTop * Translate(Vector3f(0.0, 0.0, zHeight));
             }
         }
     }
@@ -1642,19 +1656,7 @@ std::shared_ptr<Primitive> getpbrtObjectInstance(const std::string& name) {
         in.clear();
         in.push_back(accel);
     }
-    static_assert(MaxTransforms == 2,
-                  "TransformCache assumes only two transforms");
-    // Create _animatedInstanceToWorld_ transform for instance
-    Transform *InstanceToWorld[2] = {
-        transformCache.Lookup(curTransform[0]),
-        transformCache.Lookup(curTransform[1])
-    };
-    AnimatedTransform animatedInstanceToWorld(
-        InstanceToWorld[0], renderOptions->transformStartTime,
-        InstanceToWorld[1], renderOptions->transformEndTime);
-    std::shared_ptr<Primitive> prim(
-        std::make_shared<TransformedPrimitive>(in[0], animatedInstanceToWorld));
-    return prim;
+    return in[0];
 }
 
 void pbrtObjectInstance(const std::string &name) {
@@ -1665,7 +1667,24 @@ void pbrtObjectInstance(const std::string &name) {
         return;
     }
 
-    renderOptions->primitives.push_back(getpbrtObjectInstance(name));
+    renderOptions->primitives.push_back(ApplyTransforms(getpbrtObjectInstance(name)));
+}
+
+std::shared_ptr<Primitive> ApplyTransforms(std::shared_ptr<Primitive>& prim) {
+    static_assert(MaxTransforms == 2,
+                  "TransformCache assumes only two transforms");
+    // Create _animatedInstanceToWorld_ transform for instance
+    Transform *InstanceToWorld[2] = {
+        transformCache.Lookup(curTransform[0]),
+        transformCache.Lookup(curTransform[1])
+    };
+    AnimatedTransform animatedInstanceToWorld(
+        InstanceToWorld[0], renderOptions->transformStartTime,
+        InstanceToWorld[1], renderOptions->transformEndTime);
+        std::shared_ptr<Primitive> ret(
+            std::make_shared<TransformedPrimitive>(prim, animatedInstanceToWorld)
+        );
+    return ret;
 }
 
 void pbrtWorldEnd() {

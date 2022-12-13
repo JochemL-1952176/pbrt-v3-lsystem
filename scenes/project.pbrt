@@ -92,14 +92,14 @@ WorldBegin
       Texture "bark_roughness" "float" "imagemap" "string filename" "bark_19_roughness-1K.png"
       Texture "bark_height" "float" "imagemap" "string filename" "bark_19_height-1K.png"
       Material "disney" "texture bumpmap" "bark_height" "texture color" "bark_color" "texture roughness" "bark_roughness"
-      Shape "cylinder" "float radius" 0.15 "float zmin" 0 "float zmax" 1
+      Shape "cylinder" "float radius" 1 "float zmin" 0 "float zmax" 0.6
     ObjectEnd
 
     ObjectBegin "leaf"
       # Material "matte" "color Kd" [0.3 0.7 0.25]
       Texture "l" "color" "imagemap" "string filename" "leaf.exr"
       Material "matte" "texture Kd" "l"
-      Translate 0.15 0 0
+      Translate 0 0 0.6
       Shape "disk" "float radius" 0.4
     ObjectEnd
 
@@ -107,14 +107,15 @@ WorldBegin
       Shape "lsystem" 
         "integer iterations" 6
         "float delta" 22.5
+        "float scale_factor" 0.7
         "string F" "bark"
         "string Q" "leaf"
-        "string axiom" "A"
+        "string axiom" "!A"
         "production productions" [
-          "A => [{&FLA}/////{&FLA}///////{&FLA}]"
+          "A => [{&FL!A}/////{&FL!A}///////{&FL!A}]"
           "F => [S/////F]"
           "S => [F]"
-          "L => [{Q^^Q}{Q\\\\Q}]"
+          "L => [{?Q^^Q}{?Q\\\\Q}]"
         ]
     ObjectEnd
 
