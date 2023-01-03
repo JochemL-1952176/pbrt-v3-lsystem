@@ -10,7 +10,7 @@ Camera "perspective" "float fov" 60
 Film "image" "integer xresolution" 1000 "integer yresolution" 1000
 	"string filename" "lsystem.exr"
 
-Sampler "halton" "integer pixelsamples" 64
+Sampler "halton" "integer pixelsamples" 16
 
 Integrator "path"
 
@@ -36,18 +36,22 @@ WorldBegin
 
   AttributeBegin
 
-    ObjectBegin "basicCyl"
-      Material "plastic" "color Kd" [0.95 0.7 0]
-      Shape "cylinder" "float radius" 0.15 "float zmin" 0 "float zmax" 1
-    ObjectEnd
+    # ObjectBegin "basicCyl"
+    #   Material "plastic" "color Kd" [0.95 0.7 0]
+    #   Shape "cylinder" "float radius" 0.15 "float zmin" 0 "float zmax" 1
+    # ObjectEnd
 
     # Gosper Curve
-    # Shape "lsystem" 
-    #  "integer iterations" 4
-    #  "float delta" 60.0 
-    #  "string axiom" "F"
-    #  "string F" "basicCyl"
-    #  "production productions" "F => [F+F++F-F--FF-F+, -F+FF++F+F--F-F]"
+    # Rotate -90 0 1 0
+    #   Shape "lsystem" 
+    #   "integer iterations" 4
+    #   "float delta" 60.0
+    #   "string axiom" "X"
+    #   "string F" "basicCyl"
+    #   "production productions" [
+    #     "X => [X+YF++YF-FX--FXFX-YF+]"
+    #     "Y => [-FX+YFYF++YF+FX--FX-Y]"
+    #   ]
 
     # Koch curve
     # Rotate -90 0 1 0
@@ -92,14 +96,14 @@ WorldBegin
       Texture "bark_roughness" "float" "imagemap" "string filename" "bark_19_roughness-1K.png"
       Texture "bark_height" "float" "imagemap" "string filename" "bark_19_height-1K.png"
       Material "disney" "texture bumpmap" "bark_height" "texture color" "bark_color" "texture roughness" "bark_roughness"
-      Shape "cylinder" "float radius" 1 "float zmin" 0 "float zmax" 0.6
+      Shape "cylinder" "float radius" 1 "float zmin" 0 "float zmax" 1
     ObjectEnd
 
     ObjectBegin "leaf"
       # Material "matte" "color Kd" [0.3 0.7 0.25]
       Texture "l" "color" "imagemap" "string filename" "leaf.exr"
       Material "matte" "texture Kd" "l"
-      Translate 0 0 0.6
+      Translate 0 0 1
       Shape "disk" "float radius" 0.4
     ObjectEnd
 
@@ -120,17 +124,17 @@ WorldBegin
     ObjectEnd
 
     ObjectInstance "tree"
-    AttributeBegin
-      Translate 6 6 0
-      Rotate 50 0 0 1
-      ObjectInstance "tree"
-    AttributeEnd
+    # AttributeBegin
+    #   Translate 6 6 0
+    #   Rotate 50 0 0 1
+    #   ObjectInstance "tree"
+    # AttributeEnd
     
-    AttributeBegin
-      Translate -6 -6 0
-      Rotate 120 0 0 1
-      ObjectInstance "tree"  
-    AttributeEnd
+    # AttributeBegin
+    #   Translate -6 -6 0
+    #   Rotate 120 0 0 1
+    #   ObjectInstance "tree"  
+    # AttributeEnd
 
     # ObjectBegin "bush"
     #   Shape "lsystem" 

@@ -532,88 +532,96 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
                              paramSet);
     else if (name == "lsystem") {
         // TODO: Extract to CreateLSystem function
+        int nProductions, nAxioms;
         int iterations = paramSet.FindOneInt("iterations", 3);
         float delta = paramSet.FindOneFloat("delta", 90);
         float scaleFactor = paramSet.FindOneFloat("scale_factor", 1);
-        std::string axiom = paramSet.FindOneString("axiom", "");
-        int nProductions;
+        const std::string* axiom = paramSet.FindString("axiom", &nAxioms);
         std::map<char, std::vector<std::string>> productionMap;
         const std::pair<char, std::vector<std::string>>* productions = paramSet.FindProduction("productions", &nProductions);
-        while (nProductions --> 0) {
-            productionMap.insert(productions[nProductions]);
-        }
 
-        std::string current = axiom;
-        std::string next;
+        if (productions != nullptr && axiom != nullptr) {
 
-        while (iterations --> 0) {
-            for (char sym : current) {
-                auto replace = productionMap.find(sym);
-                if (replace != productionMap.end()) {
-                    std::vector<std::string>& options = replace->second;
-                    int choice = rand() % options.size();
-                    next += options[choice];
+            while (nProductions --> 0) {
+                productionMap.insert(productions[nProductions]);
+            }
+
+            std::string current = *axiom;
+            std::string next;
+
+            while (iterations --> 0) {
+                for (char sym : current) {
+                    auto replace = productionMap.find(sym);
+                    if (replace != productionMap.end()) {
+                        std::vector<std::string>& options = replace->second;
+                        int choice = rand() % options.size();
+                        next += options[choice];
+                    } else {
+                        next += sym;
+                    }
+                }
+                current = next;
+                next.clear();
+            }
+
+            Transform t = *object2world;
+            std::stack<Transform> rotationStack;
+            std::stack<Transform> scaleStack;
+            rotationStack.push(t);
+            scaleStack.push(Transform());
+            float radius = 1;
+
+            for (char ins : current) {
+                Transform& rotTop = rotationStack.top();
+                Transform& scaleTop = scaleStack.top();
+                if (ins == '+') {
+                    rotTop = rotTop * RotateY(delta);
+                } else if (ins == '-') {
+                    rotTop = rotTop * RotateY(-delta);
+                } else if (ins == '&') {
+                    rotTop = rotTop * RotateX(delta);
+                } else if (ins == '^') {
+                    rotTop = rotTop * RotateX(-delta);
+                } else if (ins == '\\') {
+                    rotTop = rotTop * RotateZ(delta);
+                } else if (ins == '/') {
+                    rotTop = rotTop * RotateZ(-delta);
+                } else if (ins == '|') {
+                    rotTop = rotTop * RotateY(180);
+                } else if (ins == '!') {
+                    scaleTop = scaleTop *  Scale(scaleFactor, scaleFactor, 1);
+                } else if (ins == '?') {
+                    scaleTop = Transform(); // Identity
+                } else if (ins == '{') { //Branch
+                    rotationStack.push(rotTop);
+                    scaleStack.push(scaleTop);
+                } else if (ins == '}') { //Branch
+                    rotationStack.pop();
+                    scaleStack.pop();
                 } else {
-                    next += sym;
+                    std::string objectToInstance = paramSet.FindOneString(std::string(1, ins), "");
+                    if (objectToInstance == "") continue;
+
+                    std::shared_ptr<Primitive> instance = getpbrtObjectInstance(objectToInstance);
+                    Bounds3f bounds = instance->WorldBound();
+                    float zHeight = std::abs(bounds.pMin.z - bounds.pMax.z);
+
+                    FOR_ACTIVE_TRANSFORMS(curTransform[i] = rotTop * scaleTop;);
+
+                    std::shared_ptr<Primitive> transformedInstance = ApplyTransforms(instance);
+                    if (renderOptions->currentInstance) {
+                        renderOptions->currentInstance->push_back(transformedInstance);
+                    } else {
+                        renderOptions->primitives.push_back(transformedInstance);
+                    }
+
+                    rotTop = rotTop * Translate(Vector3f(0.0, 0.0, zHeight));
                 }
             }
-            current = next;
-            next.clear();
-        }
-
-        Transform t = *object2world;
-        std::stack<Transform> rotationStack;
-        std::stack<Transform> scaleStack;
-        rotationStack.push(t);
-        scaleStack.push(Transform());
-        float radius = 1;
-
-        for (char ins : current) {
-            Transform& rotTop = rotationStack.top();
-            Transform& scaleTop = scaleStack.top();
-            if (ins == '+') {
-                rotTop = rotTop * RotateY(delta);
-            } else if (ins == '-') {
-                rotTop = rotTop * RotateY(-delta);
-            } else if (ins == '&') {
-                rotTop = rotTop * RotateX(delta);
-            } else if (ins == '^') {
-                rotTop = rotTop * RotateX(-delta);
-            } else if (ins == '\\') {
-                rotTop = rotTop * RotateZ(delta);
-            } else if (ins == '/') {
-                rotTop = rotTop * RotateZ(-delta);
-            } else if (ins == '|') {
-                rotTop = rotTop * RotateY(180);
-            } else if (ins == '!') {
-                scaleTop = scaleTop *  Scale(scaleFactor, scaleFactor, 1);
-            } else if (ins == '?') {
-                scaleTop = Transform(); // Identity
-            } else if (ins == '{') { //Branch
-                rotationStack.push(rotTop);
-                scaleStack.push(scaleTop);
-            } else if (ins == '}') { //Branch
-                rotationStack.pop();
-                scaleStack.pop();
-            } else {
-                std::string objectToInstance = paramSet.FindOneString(std::string(1, ins), "");
-                if (objectToInstance == "") continue;
-
-                std::shared_ptr<Primitive> instance = getpbrtObjectInstance(objectToInstance);
-                Bounds3f bounds = instance->WorldBound();
-                float zHeight = std::abs(bounds.pMin.z - bounds.pMax.z);
-
-                FOR_ACTIVE_TRANSFORMS(curTransform[i] = rotTop * scaleTop;);
-
-                std::shared_ptr<Primitive> transformedInstance = ApplyTransforms(instance);
-                if (renderOptions->currentInstance) {
-                    renderOptions->currentInstance->push_back(transformedInstance);
-                } else {
-                    renderOptions->primitives.push_back(transformedInstance);
-                }
-
-                rotTop = rotTop * Translate(Vector3f(0.0, 0.0, zHeight));
-            }
+        } else if (!productions) {
+            Error("L-System productions \"productions\" not provided with lsystem shape");
+        } else if (!axiom) {
+            Error("L-System axiom \"axiom\" not provided with lsystem shape");
         }
     }
     else
