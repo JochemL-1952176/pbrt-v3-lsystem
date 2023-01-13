@@ -117,6 +117,9 @@
 
 #include <map>
 #include <stdio.h>
+#include <stdlib.h>
+#include <random>
+#include <stack>
 
 namespace pbrt {
 
@@ -449,6 +452,7 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
     else if (name == "hyperboloid")
         s = CreateHyperboloidShape(object2world, world2object,
                                    reverseOrientation, paramSet);
+
     if (s != nullptr) shapes.push_back(s);
 
     // Create multiple-_Shape_ types
@@ -527,6 +531,116 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
     else if (name == "nurbs")
         shapes = CreateNURBS(object2world, world2object, reverseOrientation,
                              paramSet);
+    else if (name == "lsystem") {
+        // TODO: Extract to CreateLSystem function
+        int iterations = paramSet.FindOneInt("iterations", 3);
+        float delta = paramSet.FindOneFloat("delta", 90);
+        std::string axiom = paramSet.FindOneString("axiom", "");
+        std::map<char, std::vector<std::string>> productions = paramSet.FindOneProductions("prod", std::map<char, std::vector<std::string>>());
+
+        std::string current = axiom;
+        std::string next;
+
+        while (iterations --> 0) {
+            for (char sym : current) {
+                auto replace = productions.find(sym);
+                if (replace != productions.end()) {
+                    std::vector<std::string>& options = replace->second;
+                    int choice = rand() % options.size();
+                    next += options[choice];
+                } else {
+                    next += sym;
+                }
+            }
+            current = next;
+            next.clear();
+        }
+
+        Transform t = *object2world;
+        std::stack<Transform> transformStack;
+        transformStack.push(t);
+
+
+        ParamSet cylParams;
+        std::unique_ptr<Float[]> radius(new Float[1]);
+        std::unique_ptr<Float[]> zmin(new Float[1]);
+        std::unique_ptr<Float[]> zmax(new Float[1]);
+        radius.get()[0] = 0.1;
+        zmin.get()[0] = 0.0;
+        zmax.get()[0] = 1.0;
+
+        cylParams.AddFloat("radius", std::move(radius));
+        cylParams.AddFloat("zmin", std::move(zmin));
+        cylParams.AddFloat("zmax", std::move(zmax));
+
+        for (char ins : current) {
+            if (ins == 'F') {
+                Transform& top = transformStack.top();
+                Transform* localTransform = transformCache.Lookup(top); // o2w
+                Transform* iLocalTransform = transformCache.Lookup(Transform(top.GetInverseMatrix())); //w20
+
+                shapes.push_back(CreateCylinderShape(localTransform, iLocalTransform, reverseOrientation, cylParams));
+
+                top = top * Translate(Vector3f(0.0, 0.0, 1.0));
+            } else if (ins == '+') { //Rotate %s 0.0 1.0 0.0
+                Transform& top = transformStack.top();
+                top = top * RotateY(delta);
+            } else if (ins == '-') { //Rotate -%s 0.0 1.0 0.0
+                Transform& top = transformStack.top();
+                top = top * RotateY(-delta);
+            } else if (ins == '&') { //Rotate %s 1.0 0.0 0.0
+                Transform& top = transformStack.top();
+                top = top * RotateX(delta);
+            } else if (ins == '^') { //Rotate -%s 1.0 0.0 0.0
+                Transform& top = transformStack.top();
+                top = top * RotateX(-delta);
+            } else if (ins == '\\') { //Rotate %s 0.0 0.0 1.0
+                Transform& top = transformStack.top();
+                top = top * RotateZ(delta);
+            } else if (ins == '/') { //Rotate -%s 0.0 0.0 1.0
+                Transform& top = transformStack.top();
+                top = top * RotateZ(-delta);
+            } else if (ins == '|') { //Rotate 180 0.0 1.0 0.0
+                Transform& top = transformStack.top();
+                top = top * RotateY(180);
+            } else if (ins == '{') { //Branch
+                Transform newTop = transformStack.top();
+                transformStack.push(newTop);
+            } else if (ins == '}') { //Branch
+                transformStack.pop();
+            } else if (ins == 'Q') { //leaf
+                Transform& top = transformStack.top();
+                top = top * Translate(Vector3f(0.0, 0.0, 1.1));
+
+                srand(time(NULL));
+                std::default_random_engine generator;
+                std::uniform_real_distribution<float> distribution(0.0,80);
+                float rot = distribution(generator);  
+                std::uniform_real_distribution<float> distribution2(0.0,0.5);
+                float rx = distribution2(generator);
+                float ry = distribution2(generator);
+                float rz = distribution2(generator); 
+
+                top = top * Rotate(rot, Vector3f(rx,ry,rz));
+                Transform* localTransform = transformCache.Lookup(top); // o2w
+                Transform* iLocalTransform = transformCache.Lookup(Transform(top.GetInverseMatrix())); //w20
+
+                ParamSet diskParams;
+                std::unique_ptr<Float[]> radiusDisk(new Float[1]);
+                std::uniform_real_distribution<float> distribution3(0.2,0.6);
+                radiusDisk.get()[0] = distribution3(generator);//(float)(rand() % (int)((0.6 - 0.2 + 1.0) + 0.2));
+                diskParams.AddFloat("radius", std::move(radiusDisk));
+                shapes.push_back(CreateDiskShape(localTransform, iLocalTransform, reverseOrientation, diskParams));
+                top = top * Rotate(rot, Vector3f(-rx,-ry,-rz));
+                top = top * RotateY(180);
+                top = top * Translate(Vector3f(0.0, 0.0, 1.1));
+            }
+        }
+
+        // int size = shapes.size();
+        // shapes.reserve(shapes.size() + lSystemShapes.size());
+        // shapes.insert(shapes.begin() + size + 1, lSystemShapes.begin(), lSystemShapes.end());
+    }
     else
         Warning("Shape \"%s\" unknown.", name.c_str());
     return shapes;
@@ -1342,6 +1456,7 @@ void pbrtShape(const std::string &name, const ParamSet &params) {
         // Create shapes for shape _name_
         Transform *ObjToWorld = transformCache.Lookup(curTransform[0]);
         Transform *WorldToObj = transformCache.Lookup(Inverse(curTransform[0]));
+
         std::vector<std::shared_ptr<Shape>> shapes =
             MakeShapes(name, ObjToWorld, WorldToObj,
                        graphicsState.reverseOrientation, params);
