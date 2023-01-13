@@ -214,6 +214,13 @@ void ParamSet::AddString(const std::string &name,
     ADD_PARAM_TYPE(std::string, strings);
 }
 
+//Lsystem extension
+void ParamSet::AddProductions(const std::string &name,
+                              std::unique_ptr<std::map<char, std::vector<std::string>>[]> values, int nValues) {
+    EraseProductions(name);
+    productions.emplace_back(new ParamSetItem<std::map<char, std::vector<std::string>>>(name, std::move(values), nValues));
+}
+
 void ParamSet::AddTexture(const std::string &name, const std::string &value) {
     EraseTexture(name);
     std::unique_ptr<std::string[]> str(new std::string[1]);
@@ -317,6 +324,15 @@ bool ParamSet::EraseTexture(const std::string &n) {
     for (size_t i = 0; i < textures.size(); ++i)
         if (textures[i]->name == n) {
             textures.erase(textures.begin() + i);
+            return true;
+        }
+    return false;
+}
+
+bool ParamSet::EraseProductions(const std::string &s){
+    for (size_t i = 0; i < productions.size(); ++i)
+        if (productions[i]->name == s) {
+            productions.erase(productions.begin() + i);
             return true;
         }
     return false;
@@ -427,6 +443,11 @@ std::string ParamSet::FindOneString(const std::string &name,
     LOOKUP_ONE(strings);
 }
 
+std::map<char, std::vector<std::string>> ParamSet::FindOneProductions(const std::string &name,
+                                                          const std::map<char, std::vector<std::string>> &d) const {
+    LOOKUP_ONE(productions);
+}
+
 std::string ParamSet::FindOneFilename(const std::string &name,
                                       const std::string &d) const {
     std::string filename = FindOneString(name, "");
@@ -456,6 +477,7 @@ void ParamSet::ReportUnused() const {
     CHECK_UNUSED(spectra);
     CHECK_UNUSED(strings);
     CHECK_UNUSED(textures);
+    CHECK_UNUSED(productions);
 }
 
 void ParamSet::Clear() {
@@ -471,6 +493,7 @@ void ParamSet::Clear() {
     DEL_PARAMS(spectra);
     DEL_PARAMS(strings);
     DEL_PARAMS(textures);
+    DEL_PARAMS(productions);
 #undef DEL_PARAMS
 }
 
