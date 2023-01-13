@@ -42,7 +42,9 @@ WorldBegin
     # ObjectEnd
 
     # Gosper Curve
-    # Rotate -90 0 1 0
+    # Scale 0.025 0.025 0.025
+    # Rotate -90 1 0 0
+    # Translate -25 0 10
     #   Shape "lsystem" 
     #   "integer iterations" 4
     #   "float delta" 60.0
@@ -54,7 +56,10 @@ WorldBegin
     #   ]
 
     # Koch curve
+    # Scale 0.05 0.05 0.05
+    # Rotate -90 1 0 0
     # Rotate -90 0 1 0
+    # Translate 0 0 -14
     # Shape "lsystem"
     #  "integer iterations" 3
     #  "float delta" 90.0 
@@ -63,10 +68,12 @@ WorldBegin
     #  "production productions" "F => [F+F-F-F+F]"
 
     #Sierpinski triangle
-    # Translate 20 0 0
+    # Scale 0.2 0.2 0.2
+    # Rotate -90 1 0 0
+    # Translate 4 0 -3
     # Rotate -30 0 1 0
     # Shape "lsystem"
-    #   "integer iterations" 5
+    #   "integer iterations" 3
     #   "float delta" 120
     #   "string axiom" "F-G-G"
     #   "string F" "basicCyl"
@@ -77,7 +84,8 @@ WorldBegin
     #   ]
 
     # 3d Hilbert curve
-    # Translate 30 0 0
+    # Translate 10 10 0
+    # Scale 0.7 0.7 0.7
     # Shape "lsystem" 
     #  "integer iterations" 5
     #  "float delta" 90.0 
@@ -114,6 +122,7 @@ WorldBegin
         "float scale_factor" 0.7
         "string F" "bark"
         "string Q" "leaf"
+        "float random_angle_F" [-20 20]
         "string axiom" "!A"
         "production productions" [
           "A => [{&FL!A}/////{&FL!A}///////{&FL!A}]"
@@ -124,17 +133,17 @@ WorldBegin
     ObjectEnd
 
     ObjectInstance "tree"
-    # AttributeBegin
-    #   Translate 6 6 0
-    #   Rotate 50 0 0 1
-    #   ObjectInstance "tree"
-    # AttributeEnd
+    AttributeBegin
+      Translate 6 6 0
+      Rotate 50 0 0 1
+      ObjectInstance "tree"
+    AttributeEnd
     
-    # AttributeBegin
-    #   Translate -6 -6 0
-    #   Rotate 120 0 0 1
-    #   ObjectInstance "tree"  
-    # AttributeEnd
+    AttributeBegin
+      Translate -6 -6 0
+      Rotate 120 0 0 1
+      ObjectInstance "tree"  
+    AttributeEnd
 
     # ObjectBegin "bush"
     #   Shape "lsystem" 
@@ -166,7 +175,7 @@ WorldBegin
     #   Shape "lsystem" 
     #     "integer iterations" 5
     #     "float delta" 18
-    #     "string F" "flower"
+    #     "string F" "stem"
     #     "string Q" "petal"
     #     "string axiom" "P"
     #     "production productions" [
@@ -179,6 +188,8 @@ WorldBegin
     #       "W => [{^Q}{&&&&-Q+Q|-Q+Q}]"
     #     ]
     # ObjectEnd
+    
+    # Scale 0.6 0.6 0.6
     # ObjectInstance "flower"
 
   AttributeEnd

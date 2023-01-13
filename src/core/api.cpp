@@ -118,6 +118,7 @@
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
+#include <random>
 #include <stack>
 
 namespace pbrt {
@@ -569,7 +570,6 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
             std::stack<Transform> scaleStack;
             rotationStack.push(t);
             scaleStack.push(Transform());
-            float radius = 1;
 
             for (char ins : current) {
                 Transform& rotTop = rotationStack.top();
@@ -592,21 +592,66 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
                     scaleTop = scaleTop *  Scale(scaleFactor, scaleFactor, 1);
                 } else if (ins == '?') {
                     scaleTop = Transform(); // Identity
-                } else if (ins == '{') { //Branch
+                } else if (ins == '{') {
                     rotationStack.push(rotTop);
                     scaleStack.push(scaleTop);
-                } else if (ins == '}') { //Branch
+                } else if (ins == '}') {
                     rotationStack.pop();
                     scaleStack.pop();
-                } else {
+                } else { //leafs
                     std::string objectToInstance = paramSet.FindOneString(std::string(1, ins), "");
                     if (objectToInstance == "") continue;
+
+                    float minAngle = 0;
+                    float maxAngle = 0;
+
+                    int nAngles = 0;
+                    const pbrt::Float* angles = paramSet.FindFloat(std::string("random_angle_") + ins, &nAngles);
+                    if (nAngles == 2) {
+                        minAngle = angles[0];
+                        maxAngle = angles[1];
+                    } else if (nAngles == 1) {
+                        maxAngle = angles[0];
+                    } else if (nAngles != 0) {
+                        Error("Expected 1 or 2 arguments for random_angle");
+                        break;
+                    }
+
+                    float minScale = 1;
+                    float maxScale = 1;
+
+                    int nScales = 0;
+                    const pbrt::Float* scales = paramSet.FindFloat(std::string("random_scale_") + ins, &nScales);
+                    if (nScales == 2) {
+                        minScale = scales[0];
+                        maxScale = scales[1];
+                    } else if (nScales != 0) {
+                       Error("Expected 2 arguments for random_scale");
+                       break;
+                    }
+
+                    srand(time(NULL));
+                    std::default_random_engine generator;
+                    std::uniform_real_distribution<float> rotDistribution(minAngle, maxAngle);
+                    float rot = rotDistribution(generator);
+
+                    std::uniform_real_distribution<float> AxisDistribution(0.0,0.5);
+                    float rx = AxisDistribution(generator);
+                    float ry = AxisDistribution(generator);
+                    float rz = AxisDistribution(generator);  
+
+                    pbrt::Transform localRot = rotTop * Rotate(rot, Vector3f(rx, ry, rz));
+
+                    std::uniform_real_distribution<float> scaleDistribution(minScale, maxScale);
+                    float scale = scaleDistribution(generator);
+
+                    pbrt::Transform localScale = scaleTop * Scale(scale, scale, scale);
 
                     std::shared_ptr<Primitive> instance = getpbrtObjectInstance(objectToInstance);
                     Bounds3f bounds = instance->WorldBound();
                     float zHeight = std::abs(bounds.pMin.z - bounds.pMax.z);
 
-                    FOR_ACTIVE_TRANSFORMS(curTransform[i] = rotTop * scaleTop;);
+                    FOR_ACTIVE_TRANSFORMS(curTransform[i] = localRot * localScale;);
 
                     std::shared_ptr<Primitive> transformedInstance = ApplyTransforms(instance);
                     if (renderOptions->currentInstance) {
@@ -614,8 +659,10 @@ std::vector<std::shared_ptr<Shape>> MakeShapes(const std::string &name,
                     } else {
                         renderOptions->primitives.push_back(transformedInstance);
                     }
-
-                    rotTop = rotTop * Translate(Vector3f(0.0, 0.0, zHeight));
+                    //top = top * Rotate(rot, Vector3f(-rx,-ry,-rz));
+                    // top = top * RotateY(180);
+                    // top = top * Translate(Vector3f(0.0, 0.0, 1.1));
+                    rotTop = localRot * Translate(Vector3f(0.0, 0.0, zHeight));
                 }
             }
         } else if (!productions) {
